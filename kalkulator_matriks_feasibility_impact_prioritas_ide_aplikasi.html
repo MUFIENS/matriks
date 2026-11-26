@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalkulator Matriks Feasibility &amp; Impact — Prioritas Ide Aplikasi</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: light;
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #F8FAFC;
+      color: #0F172A;
+    }
+    /* Visible high-contrast focus indicator (WCAG 2.4.7 / 1.4.11) */
+    :focus-visible {
+      outline: 3px solid #1D4ED8;
+      outline-offset: 2px;
+    }
+    input[type="range"] {
+      accent-color: #1D4ED8;
+      cursor: pointer;
+    }
+    .matrix-node {
+      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), left 0.3s ease, bottom 0.3s ease, box-shadow 0.2s ease;
+    }
+    .matrix-node:hover,
+    .matrix-node:focus-visible {
+      transform: translate(-50%, 50%) scale(1.18);
+      z-index: 30;
+    }
+    .matrix-node.is-selected {
+      transform: translate(-50%, 50%) scale(1.22);
+      z-index: 35;
+      box-shadow: 0 0 0 4px #FFFFFF, 0 0 0 7px #0F172A;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-9 h-9 rounded-lg bg-blue-700 text-white flex items-center justify-center shrink-0 font-bold text-sm" aria-hidden="true">
+          F×I
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-base sm:text-lg font-bold text-slate-900 truncate">
+            Matriks Feasibility &amp; Impact
+          </h1>
+          <p class="text-xs text-slate-600 hidden sm:block truncate">
+            Kalkulator prioritas ide aplikasi berbasis bobot kelayakan dan dampak
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          id="btnOpenWeights"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-colors"
+        >
+          <svg class="w-4 h-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          <span>Bobot &amp; Batas</span>
+        </button>
+
+        <button
+          id="btnExportCsv"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-800 bg-white hover:bg-slate-100 border border-slate-300 transition-colors"
+          title="Unduh data sebagai CSV"
+        >
+          <svg class="w-4 h-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span class="hidden sm:inline">Ekspor CSV</span>
+        </button>
+
+        <button
+          id="btnCopySummary"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          </svg>
+          <span class="hidden md:inline">Salin Ringkasan</span>
+          <span class="md:hidden">Salin</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- Summary KPI Strip -->
+    <section aria-label="Ringkasan Kuadran" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <button type="button" data-filter-quadrant="quick-win" class="kpi-filter text-left bg-white p-4 rounded-xl border border-slate-200 hover:border-emerald-500 transition-colors shadow-sm">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wide text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">Quick Wins</span>
+          <span class="text-xs text-slate-600 font-medium">Prioritas #1</span>
+        </div>
+        <div class="mt-2 flex items-baseline justify-between">
+          <p id="countQuickWin" class="text-2xl font-bold text-slate-900">0</p>
+          <span class="text-xs text-slate-600">Dampak Tinggi • Mudah</span>
+        </div>
+      </button>
+
+      <button type="button" data-filter-quadrant="major-project" class="kpi-filter text-left bg-white p-4 rounded-xl border border-slate-200 hover:border-blue-500 transition-colors shadow-sm">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wide text-blue-800 bg-blue-100 px-2 py-0.5 rounded">Major Projects</span>
+          <span class="text-xs text-slate-600 font-medium">Strategis</span>
+        </div>
+        <div class="mt-2 flex items-baseline justify-between">
+          <p id="countMajorProject" class="text-2xl font-bold text-slate-900">0</p>
+          <span class="text-xs text-slate-600">Dampak Tinggi • Rumit</span>
+        </div>
+      </button>
+
+      <button type="button" data-filter-quadrant="fill-in" class="kpi-filter text-left bg-white p-4 rounded-xl border border-slate-200 hover:border-amber-500 transition-colors shadow-sm">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wide text-amber-900 bg-amber-100 px-2 py-0.5 rounded">Fill-Ins</span>
+          <span class="text-xs text-slate-600 font-medium">Sambilan</span>
+        </div>
+        <div class="mt-2 flex items-baseline justify-between">
+          <p id="countFillIn" class="text-2xl font-bold text-slate-900">0</p>
+          <span class="text-xs text-slate-600">Dampak Rendah • Mudah</span>
+        </div>
+      </button>
+
+      <button type="button" data-filter-quadrant="reconsider" class="kpi-filter text-left bg-white p-4 rounded-xl border border-slate-200 hover:border-rose-500 transition-colors shadow-sm">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wide text-rose-900 bg-rose-100 px-2 py-0.5 rounded">Tunda / Hindari</span>
+          <span class="text-xs text-slate-600 font-medium">Evaluasi</span>
+        </div>
+        <div class="mt-2 flex items-baseline justify-between">
+          <p id="countReconsider" class="text-2xl font-bold text-slate-900">0</p>
+          <span class="text-xs text-slate-600">Dampak Rendah • Rumit</span>
+        </div>
+      </button>
+    </section>
+
+    <!-- Primary Workspace: Calculator Form + 2x2 Matrix -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- Left: Idea Input & Live Calculator -->
+      <section aria-labelledby="formHeading" class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-2 mb-4">
+          <h2 id="formHeading" class="text-base font-bold text-slate-900">Tambah &amp; Hitung Ide Aplikasi</h2>
+          <span id="editModeBadge" class="hidden text-xs font-semibold bg-amber-100 text-amber-900 px-2.5 py-1 rounded-full">Mode Edit</span>
+        </div>
+
+        <form id="ideaForm" class="space-y-4" novalidate>
+          <input type="hidden" id="editingId" value="" />
+
+          <div>
+            <label for="ideaName" class="block text-sm font-semibold text-slate-800 mb-1">
+              Nama Ide Aplikasi <span class="text-rose-700">*</span>
+            </label>
+            <input
+              id="ideaName"
+              type="text"
+              required
+              maxlength="80"
+              placeholder="Contoh: Aplikasi Pengatur Jadwal Belajar AI"
+              class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 placeholder:text-slate-500 bg-white focus:border-blue-700"
+            />
+            <p id="ideaNameError" class="hidden mt-1 text-xs font-medium text-rose-700" role="alert">
+              Nama ide aplikasi wajib diisi.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="ideaCategory" class="block text-sm font-semibold text-slate-800 mb-1">Kategori</label>
+              <select
+                id="ideaCategory"
+                class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 bg-white focus:border-blue-700"
+              >
+                <option value="Produktivitas">Produktivitas</option>
+                <option value="AI & Otomasi">AI &amp; Otomasi</option>
+                <option value="Edukasi">Edukasi</option>
+                <option value="SaaS / Bisnis">SaaS / Bisnis</option>
+                <option value="Keuangan">Keuangan</option>
+                <option value="Hiburan / Game">Hiburan / Game</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+            <div>
+              <label for="ideaNote" class="block text-sm font-semibold text-slate-800 mb-1">Catatan Singkat</label>
+              <input
+                id="ideaNote"
+                type="text"
+                maxlength="120"
+                placeholder="Target pengguna / fitur inti"
+                class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 placeholder:text-slate-500 bg-white focus:border-blue-700"
+              />
+            </div>
+          </div>
+
+          <!-- Feasibility Sliders -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">1. Dimensi Feasibility (Kelayakan)</h3>
+              <span id="previewFeasibility" class="text-sm font-bold text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-md">7.00</span>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-slate-700 mb-1">
+                <label for="sliderTech">Kesiapan Teknis &amp; Skill (<span id="labelWTech">35</span>%)</label>
+                <span id="valTech" class="font-bold text-slate-900">7 / 10</span>
+              </div>
+              <input id="sliderTech" type="range" min="1" max="10" step="1" value="7" class="w-full h-2 rounded-lg bg-slate-200" />
+              <div class="flex justify-between text-[11px] text-slate-600 mt-0.5">
+                <span>1: Butuh riset berat</span>
+                <span>10: Sangat dikuasai</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-slate-700 mb-1">
+                <label for="sliderTime">Kecepatan &amp; Kompleksitas (<span id="labelWTime">35</span>%)</label>
+                <span id="valTime" class="font-bold text-slate-900">7 / 10</span>
+              </div>
+              <input id="sliderTime" type="range" min="1" max="10" step="1" value="7" class="w-full h-2 rounded-lg bg-slate-200" />
+              <div class="flex justify-between text-[11px] text-slate-600 mt-0.5">
+                <span>1: Berbulan-bulan</span>
+                <span>10: Selesai beberapa hari</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-slate-700 mb-1">
+                <label for="sliderCost">Efisiensi Biaya &amp; Resource (<span id="labelWCost">30</span>%)</label>
+                <span id="valCost" class="font-bold text-slate-900">7 / 10</span>
+              </div>
+              <input id="sliderCost" type="range" min="1" max="10" step="1" value="7" class="w-full h-2 rounded-lg bg-slate-200" />
+              <div class="flex justify-between text-[11px] text-slate-600 mt-0.5">
+                <span>1: Biaya server/API mahal</span>
+                <span>10: Gratis / biaya minim</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Impact Sliders -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">2. Dimensi Impact (Dampak)</h3>
+              <span id="previewImpact" class="text-sm font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-md">7.00</span>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-slate-700 mb-1">
+                <label for="sliderValue">Nilai &amp; Urgensi Masalah (<span id="labelWValue">40</span>%)</label>
+                <span id="valValue" class="font-bold text-slate-900">7 / 10</span>
+              </div>
+              <input id="sliderValue" type="range" min="1" max="10" step="1" value="7" class="w-full h-2 rounded-lg bg-slate-200" />
+              <div class="flex justify-between text-[11px] text-slate-600 mt-0.5">
+                <span>1: Sekadar pelengkap</span>
+                <span>10: Solusi masalah mendesak</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-slate-700 mb-1">
+                <label for="sliderReach">Potensi Jangkauan Pengguna (<span id="labelWReach">30</span>%)</label>
+                <span id="valReach" class="font-bold text-slate-900">7 / 10</span>
+              </div>
+              <input id="sliderReach" type="range" min="1" max="10" step="1" value="7" class="w-full h-2 rounded-lg bg-slate-200" />
+              <div class="flex justify-between text-[11px] text-slate-600 mt-0.5">
+                <span>1: Niche sangat kecil</span>
+                <span>10: Pasar luas</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-medium text-slate-700 mb-1">
+                <label for="sliderStrategic">Potensi Bisnis / Portofolio (<span id="labelWStrategic">30</span>%)</label>
+                <span id="valStrategic" class="font-bold text-slate-900">7 / 10</span>
+              </div>
+              <input id="sliderStrategic" type="range" min="1" max="10" step="1" value="7" class="w-full h-2 rounded-lg bg-slate-200" />
+              <div class="flex justify-between text-[11px] text-slate-600 mt-0.5">
+                <span>1: Dampak minim</span>
+                <span>10: Revenue / portofolio tinggi</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Calculation Result Bar -->
+          <div class="p-3.5 rounded-xl border border-slate-300 bg-white flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p class="text-xs text-slate-600 font-medium">Hasil Kalkulasi Saat Ini</p>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span class="text-sm font-bold text-slate-900">Skor Prioritas: <span id="previewPriority">7.00</span></span>
+                <span id="previewQuadrantBadge" class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                  Quick Wins
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-1">
+            <button
+              id="btnSubmitIdea"
+              type="submit"
+              class="flex-1 py-2.5 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold transition-colors"
+            >
+              + Tambah ke Matriks
+            </button>
+            <button
+              id="btnCancelEdit"
+              type="button"
+              class="hidden py-2.5 px-4 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-900 text-sm font-semibold transition-colors"
+            >
+              Batal
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right: Interactive 2x2 Matrix Scatter Plot -->
+      <section aria-labelledby="matrixHeading" class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 id="matrixHeading" class="text-base font-bold text-slate-900">Peta Kuadran Feasibility vs. Impact</h2>
+            <p class="text-xs text-slate-600">
+              Klik titik ide pada grafik untuk melihat detail atau mengedit skor. Batas kuadran saat ini: <strong id="thresholdLabel" class="text-slate-900">5.5</strong>
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              id="btnResetSamples"
+              type="button"
+              class="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              Muat Contoh
+            </button>
+            <button
+              id="btnClearAll"
+              type="button"
+              class="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-rose-300 text-rose-800 hover:bg-rose-50 transition-colors"
+            >
+              Kosongkan
+            </button>
+          </div>
+        </div>
+
+        <!-- Matrix Canvas Container -->
+        <div class="pl-7 pb-7 pt-2 pr-2">
+          <div id="matrixPlot" class="relative w-full h-[360px] sm:h-[420px] rounded-xl border-2 border-slate-300 overflow-hidden bg-slate-50 select-none" role="region" aria-label="Grafik Matriks Feasibility dan Impact">
+            <!-- 4 Quadrant Backgrounds (dynamically positioned by threshold) -->
+            <div id="quadMajor" class="absolute top-0 left-0 bg-blue-50/70 border-r border-b border-dashed border-slate-400 p-2.5 pointer-events-none">
+              <span class="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-blue-900 bg-blue-100/90 px-2 py-0.5 rounded">
+                ◆ Major Projects
+              </span>
+            </div>
+            <div id="quadQuick" class="absolute top-0 right-0 bg-emerald-50/70 border-b border-dashed border-slate-400 p-2.5 text-right pointer-events-none">
+              <span class="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-emerald-900 bg-emerald-100/90 px-2 py-0.5 rounded">
+                ★ Quick Wins
+              </span>
+            </div>
+            <div id="quadReconsider" class="absolute bottom-0 left-0 bg-rose-50/60 border-r border-dashed border-slate-400 p-2.5 flex items-end pointer-events-none">
+              <span class="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-rose-900 bg-rose-100/90 px-2 py-0.5 rounded">
+                ✕ Tunda / Hindari
+              </span>
+            </div>
+            <div id="quadFill" class="absolute bottom-0 right-0 bg-amber-50/60 p-2.5 flex items-end justify-end pointer-events-none">
+              <span class="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded">
+                ● Fill-Ins
+              </span>
+            </div>
+
+            <!-- Axis Labels inside wrapper -->
+            <div id="matrixNodesLayer" class="absolute inset-0"></div>
+
+            <!-- Empty state overlay -->
+            <div id="matrixEmptyOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white/85 p-6 text-center z-20">
+              <p class="text-sm font-semibold text-slate-900">Belum ada ide di matriks</p>
+              <p class="text-xs text-slate-600 mt-1 max-w-xs">Tambahkan ide aplikasi di formulir sebelah kiri atau klik "Muat Contoh" untuk mulai memetakan.</p>
+            </div>
+          </div>
+
+          <!-- X & Y Axis Captions -->
+          <div class="relative mt-2 flex items-center justify-between text-xs font-semibold text-slate-700">
+            <span>1 (Sulit)</span>
+            <span class="text-slate-900">Feasibility / Kelayakan &rarr;</span>
+            <span>10 (Sangat Layak)</span>
+          </div>
+        </div>
+
+        <!-- Selected Idea Inspector Bar -->
+        <div id="selectedInspector" class="mt-3 p-3.5 rounded-xl bg-slate-100 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div id="inspectorContent" class="text-xs sm:text-sm text-slate-700">
+            Pilih salah satu titik bernomor pada matriks untuk melihat detail skornya.
+          </div>
+          <div id="inspectorActions" class="hidden flex items-center gap-2 shrink-0">
+            <button id="btnInspectorEdit" type="button" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-800 hover:bg-slate-50">
+              Edit Skor
+            </button>
+            <button id="btnInspectorDelete" type="button" class="px-3 py-1.5 rounded-lg bg-rose-700 text-xs font-semibold text-white hover:bg-rose-800">
+              Hapus
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Ranked Idea List & Filters -->
+    <section aria-labelledby="listHeading" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 id="listHeading" class="text-base font-bold text-slate-900">Daftar Peringkat Ide Aplikasi</h2>
+          <p class="text-xs text-slate-600">Diurutkan otomatis untuk membantu memilih aplikasi mana yang paling layak dikerjakan lebih dulu.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative">
+            <label for="searchInput" class="sr-only">Cari ide aplikasi</label>
+            <input
+              id="searchInput"
+              type="search"
+              placeholder="Cari nama atau kategori..."
+              class="pl-3 pr-3 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm text-slate-900 placeholder:text-slate-500 bg-white w-48 sm:w-56"
+            />
+          </div>
+
+          <label for="filterQuadrant" class="sr-only">Filter kuadran</label>
+          <select id="filterQuadrant" class="px-3 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm text-slate-900 bg-white">
+            <option value="all">Semua Kuadran</option>
+            <option value="quick-win">Quick Wins</option>
+            <option value="major-project">Major Projects</option>
+            <option value="fill-in">Fill-Ins</option>
+            <option value="reconsider">Tunda / Hindari</option>
+          </select>
+
+          <label for="sortBy" class="sr-only">Urutkan berdasarkan</label>
+          <select id="sortBy" class="px-3 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm text-slate-900 bg-white">
+            <option value="priority">Skor Prioritas Tertinggi</option>
+            <option value="impact">Impact Tertinggi</option>
+            <option value="feasibility">Feasibility Tertinggi</option>
+            <option value="newest">Terbaru Ditambahkan</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Ideas Table / Cards -->
+      <div id="ideasListContainer" class="space-y-3"></div>
+    </section>
+  </main>
+
+  <!-- Modal: Weights & Threshold Settings -->
+  <div id="weightsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-labelledby="weightsModalTitle">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto space-y-5">
+      <div class="flex items-center justify-between">
+        <h2 id="weightsModalTitle" class="text-lg font-bold text-slate-900">Pengaturan Bobot &amp; Ambang Batas</h2>
+        <button id="btnCloseWeights" type="button" class="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100" aria-label="Tutup pengaturan">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <div class="flex justify-between text-sm font-semibold text-slate-900">
+            <label for="thresholdSlider">Ambang Batas Kuadran (Tinggi vs Rendah)</label>
+            <span id="thresholdVal" class="text-blue-800">5.5</span>
+          </div>
+          <input id="thresholdSlider" type="range" min="3" max="8" step="0.5" value="5.5" class="w-full h-2 rounded-lg bg-slate-200" />
+          <p class="text-xs text-slate-600">Ide dengan skor &ge; batas ini masuk kategori Tinggi pada sumbu terkait.</p>
+        </div>
+
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Bobot Kriteria Feasibility</h3>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label for="wTech" class="block text-xs font-medium text-slate-700 mb-1">Teknis (%)</label>
+              <input id="wTech" type="number" min="0" max="100" value="35" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-900" />
+            </div>
+            <div>
+              <label for="wTime" class="block text-xs font-medium text-slate-700 mb-1">Waktu (%)</label>
+              <input id="wTime" type="number" min="0" max="100" value="35" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-900" />
+            </div>
+            <div>
+              <label for="wCost" class="block text-xs font-medium text-slate-700 mb-1">Biaya (%)</label>
+              <input id="wCost" type="number" min="0" max="100" value="30" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-900" />
+            </div>
+          </div>
+          <p id="fWeightSumNote" class="text-xs text-slate-600">Total bobot Feasibility akan dinormalisasi otomatis saat menghitung.</p>
+        </div>
+
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Bobot Kriteria Impact</h3>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label for="wValue" class="block text-xs font-medium text-slate-700 mb-1">Nilai User (%)</label>
+              <input id="wValue" type="number" min="0" max="100" value="40" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-900" />
+            </div>
+            <div>
+              <label for="wReach" class="block text-xs font-medium text-slate-700 mb-1">Jangkauan (%)</label>
+              <input id="wReach" type="number" min="0" max="100" value="30" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-900" />
+            </div>
+            <div>
+              <label for="wStrategic" class="block text-xs font-medium text-slate-700 mb-1">Strategis (%)</label>
+              <input id="wStrategic" type="number" min="0" max="100" value="30" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-900" />
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <div class="flex justify-between text-xs font-semibold text-slate-900">
+            <label for="impactShareSlider">Proporsi Skor Prioritas (Impact vs Feasibility)</label>
+            <span id="impactShareLabel" class="text-blue-800">55% Impact / 45% Feasibility</span>
+          </div>
+          <input id="impactShareSlider" type="range" min="20" max="80" step="5" value="55" class="w-full h-2 rounded-lg bg-slate-200" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-200">
+        <button id="btnResetWeights" type="button" class="text-xs font-semibold text-slate-700 hover:text-slate-900 underline">
+          Reset Default
+        </button>
+        <button id="btnSaveWeights" type="button" class="px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold">
+          Terapkan Pengaturan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmation Dialog (replaces native confirm) -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-200 space-y-4">
+      <h2 id="confirmTitle" class="text-base font-bold text-slate-900">Konfirmasi</h2>
+      <p id="confirmMessage" class="text-sm text-slate-700"></p>
+      <div class="flex justify-end gap-2">
+        <button id="btnConfirmCancel" type="button" class="px-4 py-2 rounded-lg border border-slate-300 text-sm font-semibold text-slate-800 hover:bg-slate-100">
+          Batal
+        </button>
+        <button id="btnConfirmOk" type="button" class="px-4 py-2 rounded-lg bg-rose-700 text-sm font-semibold text-white hover:bg-rose-800">
+          Ya, Lanjutkan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg flex items-center gap-2" role="status" aria-live="polite">
+    <span id="toastText"></span>
+  </div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'matrix_ide_aplikasi_v1';
+
+      const DEFAULT_SETTINGS = {
+        threshold: 5.5,
+        wTech: 35,
+        wTime: 35,
+        wCost: 30,
+        wValue: 40,
+        wReach: 30,
+        wStrategic: 30,
+        impactShare: 55
+      };
+
+      const SAMPLE_IDEAS = [
+        {
+          id: 'idea-1',
+          name: 'Catatan Keuangan Mahasiswa & Split Bill',
+          category: 'Keuangan',
+          note: 'Catat pengeluaran harian + bagi tagihan kosan otomatis',
+          tech: 9, time: 8, cost: 9,
+          value: 8, reach: 8, strategic: 7,
+          createdAt: 1700000001
+        },
+        {
+          id: 'idea-2',
+          name: 'AI Review CV & Simulasi Interview Lokal',
+          category: 'AI & Otomasi',
+          note: 'Bantu fresh graduate latihan wawancara & perbaiki CV',
+          tech: 7, time: 6, cost: 5,
+          value: 9, reach: 8, strategic: 9,
+          createdAt: 1700000002
+        },
+        {
+          id: 'idea-3',
+          name: 'Marketplace Jasa Tukang & Servis Rumah',
+          category: 'SaaS / Bisnis',
+          note: 'Butuh verifikasi mitra, pembayaran escrow, dan operasional lapangan',
+          tech: 5, time: 3, cost: 3,
+          value: 8, reach: 9, strategic: 8,
+          createdAt: 1700000003
+        },
+        {
+          id: 'idea-4',
+          name: 'Generator Wallpaper Minimalis Harian',
+          category: 'Hiburan / Game',
+          note: 'Buat wallpaper geometris otomatis untuk desktop & HP',
+          tech: 9, time: 9, cost: 9,
+          value: 4, reach: 5, strategic: 3,
+          createdAt: 1700000004
+        },
+        {
+          id: 'idea-5',
+          name: 'Simulasi Dunia Virtual 3D Multi-Pemain',
+          category: 'Hiburan / Game',
+          note: 'Engine 3D real-time + server sinkronisasi pemain',
+          tech: 3, time: 2, cost: 2,
+          value: 4, reach: 5, strategic: 4,
+          createdAt: 1700000005
+        }
+      ];
+
+      let state = {
+        ideas: [],
+        settings: { ...DEFAULT_SETTINGS },
+        selectedId: null,
+        filterQuadrant: 'all',
+        searchQuery: '',
+        sortBy: 'priority'
+      };
+
+      let pendingConfirmAction = null;
+      let toastTimer = null;
+
+      // DOM References
+      const els = {
+        ideaForm: document.getElementById('ideaForm'),
+        editingId: document.getElementById('editingId'),
+        editModeBadge: document.getElementById('editModeBadge'),
+        ideaName: document.getElementById('ideaName'),
+        ideaNameError: document.getElementById('ideaNameError'),
+        ideaCategory: document.getElementById('ideaCategory'),
+        ideaNote: document.getElementById('ideaNote'),
+        sliderTech: document.getElementById('sliderTech'),
+        sliderTime: document.getElementById('sliderTime'),
+        sliderCost: document.getElementById('sliderCost'),
+        sliderValue: document.getElementById('sliderValue'),
+        sliderReach: document.getElementById('sliderReach'),
+        sliderStrategic: document.getElementById('sliderStrategic'),
+        valTech: document.getElementById('valTech'),
+        valTime: document.getElementById('valTime'),
+        valCost: document.getElementById('valCost'),
+        valValue: document.getElementById('valValue'),
+        valReach: document.getElementById('valReach'),
+        valStrategic: document.getElementById('valStrategic'),
+        labelWTech: document.getElementById('labelWTech'),
+        labelWTime: document.getElementById('labelWTime'),
+        labelWCost: document.getElementById('labelWCost'),
+        labelWValue: document.getElementById('labelWValue'),
+        labelWReach: document.getElementById('labelWReach'),
+        labelWStrategic: document.getElementById('labelWStrategic'),
+        previewFeasibility: document.getElementById('previewFeasibility'),
+        previewImpact: document.getElementById('previewImpact'),
+        previewPriority: document.getElementById('previewPriority'),
+        previewQuadrantBadge: document.getElementById('previewQuadrantBadge'),
+        btnSubmitIdea: document.getElementById('btnSubmitIdea'),
+        btnCancelEdit: document.getElementById('btnCancelEdit'),
+        matrixPlot: document.getElementById('matrixPlot'),
+        matrixNodesLayer: document.getElementById('matrixNodesLayer'),
+        matrixEmptyOverlay: document.getElementById('matrixEmptyOverlay'),
+        quadMajor: document.getElementById('quadMajor'),
+        quadQuick: document.getElementById('quadQuick'),
+        quadReconsider: document.getElementById('quadReconsider'),
+        quadFill: document.getElementById('quadFill'),
+        thresholdLabel: document.getElementById('thresholdLabel'),
+        inspectorContent: document.getElementById('inspectorContent'),
+        inspectorActions: document.getElementById('inspectorActions'),
+        btnInspectorEdit: document.getElementById('btnInspectorEdit'),
+        btnInspectorDelete: document.getElementById('btnInspectorDelete'),
+        countQuickWin: document.getElementById('countQuickWin'),
+        countMajorProject: document.getElementById('countMajorProject'),
+        countFillIn: document.getElementById('countFillIn'),
+        countReconsider: document.getElementById('countReconsider'),
+        ideasListContainer: document.getElementById('ideasListContainer'),
+        searchInput: document.getElementById('searchInput'),
+        filterQuadrant: document.getElementById('filterQuadrant'),
+        sortBy: document.getElementById('sortBy'),
+        weightsModal: document.getElementById('weightsModal'),
+        btnOpenWeights: document.getElementById('btnOpenWeights'),
+        btnCloseWeights: document.getElementById('btnCloseWeights'),
+        btnSaveWeights: document.getElementById('btnSaveWeights'),
+        btnResetWeights: document.getElementById('btnResetWeights'),
+        thresholdSlider: document.getElementById('thresholdSlider'),
+        thresholdVal: document.getElementById('thresholdVal'),
+        wTech: document.getElementById('wTech'),
+        wTime: document.getElementById('wTime'),
+        wCost: document.getElementById('wCost'),
+        wValue: document.getElementById('wValue'),
+        wReach: document.getElementById('wReach'),
+        wStrategic: document.getElementById('wStrategic'),
+        impactShareSlider: document.getElementById('impactShareSlider'),
+        impactShareLabel: document.getElementById('impactShareLabel'),
+        confirmModal: document.getElementById('confirmModal'),
+        confirmMessage: document.getElementById('confirmMessage'),
+        btnConfirmCancel: document.getElementById('btnConfirmCancel'),
+        btnConfirmOk: document.getElementById('btnConfirmOk'),
+        btnResetSamples: document.getElementById('btnResetSamples'),
+        btnClearAll: document.getElementById('btnClearAll'),
+        btnExportCsv: document.getElementById('btnExportCsv'),
+        btnCopySummary: document.getElementById('btnCopySummary'),
+        toast: document.getElementById('toast'),
+        toastText: document.getElementById('toastText')
+      };
+
+      // Storage Helpers
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed.ideas)) {
+              state.ideas = parsed.ideas;
+            } else {
+              state.ideas = SAMPLE_IDEAS.map((item) => ({ ...item }));
+            }
+            if (parsed.settings && typeof parsed.settings === 'object') {
+              state.settings = { ...DEFAULT_SETTINGS, ...parsed.settings };
+            }
+            return;
+          }
+        } catch (err) {
+          // Ignore storage errors in restricted environments
+        }
+        state.ideas = SAMPLE_IDEAS.map((item) => ({ ...item }));
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({
+              ideas: state.ideas,
+              settings: state.settings
+            })
+          );
+        } catch (err) {
+          // Ignore storage errors
+        }
+      }
+
+      // Calculation Engine
+      function computeScores(item, settings = state.settings) {
+        const fSum = settings.wTech + settings.wTime + settings.wCost;
+        const feasibility =
+          fSum > 0
+            ? (item.tech * settings.wTech + item.time * settings.wTime + item.cost * settings.wCost) / fSum
+            : (item.tech + item.time + item.cost) / 3;
+
+        const iSum = settings.wValue + settings.wReach + settings.wStrategic;
+        const impact =
+          iSum > 0
+            ? (item.value * settings.wValue + item.reach * settings.wReach + item.strategic * settings.wStrategic) / iSum
+            : (item.value + item.reach + item.strategic) / 3;
+
+        const iShare = settings.impactShare / 100;
+        const priority = impact * iShare + feasibility * (1 - iShare);
+
+        const t = settings.threshold;
+        let quadrant = 'reconsider';
+        if (impact >= t && feasibility >= t) quadrant = 'quick-win';
+        else if (impact >= t && feasibility < t) quadrant = 'major-project';
+        else if (impact < t && feasibility >= t) quadrant = 'fill-in';
+
+        return {
+          feasibility: Number(feasibility.toFixed(2)),
+          impact: Number(impact.toFixed(2)),
+          priority: Number(priority.toFixed(2)),
+          quadrant
+        };
+      }
+
+      function getQuadrantMeta(quadrant) {
+        switch (quadrant) {
+          case 'quick-win':
+            return {
+              label: 'Quick Wins',
+              symbol: '★',
+              badgeClass: 'bg-emerald-100 text-emerald-900 border border-emerald-300',
+              nodeClass: 'bg-emerald-700 text-white border-2 border-white shadow-md'
+            };
+          case 'major-project':
+            return {
+              label: 'Major Projects',
+              symbol: '◆',
+              badgeClass: 'bg-blue-100 text-blue-900 border border-blue-300',
+              nodeClass: 'bg-blue-700 text-white border-2 border-white shadow-md'
+            };
+          case 'fill-in':
+            return {
+              label: 'Fill-Ins',
+              symbol: '●',
+              badgeClass: 'bg-amber-100 text-amber-900 border border-amber-300',
+              nodeClass: 'bg-amber-600 text-white border-2 border-white shadow-md'
+            };
+          default:
+            return {
+              label: 'Tunda / Hindari',
+              symbol: '✕',
+              badgeClass: 'bg-rose-100 text-rose-900 border border-rose-300',
+              nodeClass: 'bg-rose-700 text-white border-2 border-white shadow-md'
+            };
+        }
+      }
+
+      function showToast(message) {
+        els.toastText.textContent = message;
+        els.toast.classList.remove('hidden');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          els.toast.classList.add('hidden');
+        }, 2800);
+      }
+
+      function openConfirm(message, onConfirm) {
+        els.confirmMessage.textContent = message;
+        pendingConfirmAction = onConfirm;
+        els.confirmModal.classList.remove('hidden');
+        els.btnConfirmOk.focus();
+      }
+
+      function closeConfirm() {
+        els.confirmModal.classList.add('hidden');
+        pendingConfirmAction = null;
+      }
+
+      // Live Form Preview
+      function updateFormPreview() {
+        const s = state.settings;
+        const fSum = s.wTech + s.wTime + s.wCost || 100;
+        const iSum = s.wValue + s.wReach + s.wStrategic || 100;
+
+        els.labelWTech.textContent = Math.round((s.wTech / fSum) * 100);
+        els.labelWTime.textContent = Math.round((s.wTime / fSum) * 100);
+        els.labelWCost.textContent = Math.round((s.wCost / fSum) * 100);
+        els.labelWValue.textContent = Math.round((s.wValue / iSum) * 100);
+        els.labelWReach.textContent = Math.round((s.wReach / iSum) * 100);
+        els.labelWStrategic.textContent = Math.round((s.wStrategic / iSum) * 100);
+
+        const draft = {
+          tech: Number(els.sliderTech.value),
+          time: Number(els.sliderTime.value),
+          cost: Number(els.sliderCost.value),
+          value: Number(els.sliderValue.value),
+          reach: Number(els.sliderReach.value),
+          strategic: Number(els.sliderStrategic.value)
+        };
+
+        els.valTech.textContent = `${draft.tech} / 10`;
+        els.valTime.textContent = `${draft.time} / 10`;
+        els.valCost.textContent = `${draft.cost} / 10`;
+        els.valValue.textContent = `${draft.value} / 10`;
+        els.valReach.textContent = `${draft.reach} / 10`;
+        els.valStrategic.textContent = `${draft.strategic} / 10`;
+
+        const scores = computeScores(draft);
+        const meta = getQuadrantMeta(scores.quadrant);
+
+        els.previewFeasibility.textContent = scores.feasibility.toFixed(2);
+        els.previewImpact.textContent = scores.impact.toFixed(2);
+        els.previewPriority.textContent = scores.priority.toFixed(2);
+        els.previewQuadrantBadge.className = `inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded ${meta.badgeClass}`;
+        els.previewQuadrantBadge.textContent = `${meta.symbol} ${meta.label}`;
+      }
+
+      // Render All Views
+      function render() {
+        const enriched = state.ideas.map((item) => ({
+          ...item,
+          ...computeScores(item)
+        }));
+
+        // Global ranking by priority descending
+        const rankedByPriority = [...enriched].sort((a, b) => b.priority - a.priority || b.impact - a.impact);
+        const rankMap = new Map();
+        rankedByPriority.forEach((item, idx) => rankMap.set(item.id, idx + 1));
+
+        // Update KPI Counts
+        const counts = { 'quick-win': 0, 'major-project': 0, 'fill-in': 0, reconsider: 0 };
+        enriched.forEach((item) => {
+          counts[item.quadrant] = (counts[item.quadrant] || 0) + 1;
+        });
+        els.countQuickWin.textContent = counts['quick-win'];
+        els.countMajorProject.textContent = counts['major-project'];
+        els.countFillIn.textContent = counts['fill-in'];
+        els.countReconsider.textContent = counts.reconsider;
+
+        // Position Quadrant Dividers based on threshold (scale 1..10 -> 0..100%)
+        const tPct = ((state.settings.threshold - 1) / 9) * 100;
+        els.thresholdLabel.textContent = state.settings.threshold.toFixed(1);
+
+        els.quadMajor.style.width = `${tPct}%`;
+        els.quadMajor.style.height = `${100 - tPct}%`;
+        els.quadQuick.style.width = `${100 - tPct}%`;
+        els.quadQuick.style.height = `${100 - tPct}%`;
+        els.quadReconsider.style.width = `${tPct}%`;
+        els.quadReconsider.style.height = `${tPct}%`;
+        els.quadFill.style.width = `${100 - tPct}%`;
+        els.quadFill.style.height = `${tPct}%`;
+
+        // Render Matrix Nodes
+        els.matrixNodesLayer.innerHTML = '';
+        els.matrixEmptyOverlay.classList.toggle('hidden', enriched.length > 0);
+
+        enriched.forEach((item) => {
+          const rank = rankMap.get(item.id);
+          const meta = getQuadrantMeta(item.quadrant);
+          // Clamp within 5%..95% so edge dots (1 or 10) don't clip outside container
+          const leftPct = 5 + ((item.feasibility - 1) / 9) * 90;
+          const bottomPct = 5 + ((item.impact - 1) / 9) * 90;
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `matrix-node absolute w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center cursor-pointer ${meta.nodeClass} ${state.selectedId === item.id ? 'is-selected' : ''}`;
+          btn.style.left = `${leftPct}%`;
+          btn.style.bottom = `${bottomPct}%`;
+          btn.style.transform = 'translate(-50%, 50%)';
+          btn.textContent = `#${rank}`;
+          btn.title = `${item.name} — Kelayakan: ${item.feasibility}, Dampak: ${item.impact}`;
+          btn.setAttribute(
+            'aria-label',
+            `Peringkat ${rank}: ${item.name}, Kelayakan ${item.feasibility}, Dampak ${item.impact}, Kuadran ${meta.label}`
+          );
+
+          btn.addEventListener('click', () => {
+            state.selectedId = item.id;
+            render();
+          });
+          els.matrixNodesLayer.appendChild(btn);
+        });
+
+        // Render Inspector
+        const selected = enriched.find((i) => i.id === state.selectedId);
+        if (selected) {
+          const meta = getQuadrantMeta(selected.quadrant);
+          const rank = rankMap.get(selected.id);
+          els.inspectorContent.innerHTML = `
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-bold text-slate-900">#${rank} ${escapeHtml(selected.name)}</span>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded ${meta.badgeClass}">${meta.symbol} ${meta.label}</span>
+            </div>
+            <p class="text-xs text-slate-700 mt-1">
+              Feasibility: <strong>${selected.feasibility.toFixed(2)}</strong> •
+              Impact: <strong>${selected.impact.toFixed(2)}</strong> •
+              Prioritas: <strong>${selected.priority.toFixed(2)}</strong>
+              ${selected.note ? ` — ${escapeHtml(selected.note)}` : ''}
+            </p>
+          `;
+          els.inspectorActions.classList.remove('hidden');
+        } else {
+          els.inspectorContent.textContent =
+            'Pilih salah satu titik bernomor pada matriks untuk melihat detail skornya.';
+          els.inspectorActions.classList.add('hidden');
+        }
+
+        // Filter & Sort List
+        const q = state.searchQuery.trim().toLowerCase();
+        let filtered = enriched.filter((item) => {
+          const matchQuad = state.filterQuadrant === 'all' || item.quadrant === state.filterQuadrant;
+          const matchText =
+            !q ||
+            item.name.toLowerCase().includes(q) ||
+            item.category.toLowerCase().includes(q) ||
+            (item.note && item.note.toLowerCase().includes(q));
+          return matchQuad && matchText;
+        });
+
+        filtered.sort((a, b) => {
+          if (state.sortBy === 'impact') return b.impact - a.impact || b.feasibility - a.feasibility;
+          if (state.sortBy === 'feasibility') return b.feasibility - a.feasibility || b.impact - a.impact;
+          if (state.sortBy === 'newest') return b.createdAt - a.createdAt;
+          return b.priority - a.priority || b.impact - a.impact;
+        });
+
+        // Render Idea Cards
+        els.ideasListContainer.innerHTML = '';
+        if (filtered.length === 0) {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'p-8 text-center rounded-xl border border-dashed border-slate-300 bg-slate-50';
+          emptyDiv.innerHTML = `
+            <p class="text-sm font-semibold text-slate-900">Tidak ada ide yang cocok</p>
+            <p class="text-xs text-slate-600 mt-1">Ubah filter pencarian atau tambahkan ide aplikasi baru.</p>
+          `;
+          els.ideasListContainer.appendChild(emptyDiv);
+        } else {
+          filtered.forEach((item) => {
+            const rank = rankMap.get(item.id);
+            const meta = getQuadrantMeta(item.quadrant);
+            const isSelected = state.selectedId === item.id;
+
+            const card = document.createElement('article');
+            card.className = `p-4 rounded-xl border transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+              isSelected ? 'border-blue-700 bg-blue-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
+            }`;
+
+            card.innerHTML = `
+              <div class="space-y-1 min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold">#${rank}</span>
+                  <h3 class="text-sm sm:text-base font-bold text-slate-900 truncate">${escapeHtml(item.name)}</h3>
+                  <span class="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(item.category)}</span>
+                  <span class="text-xs font-semibold px-2.5 py-0.5 rounded ${meta.badgeClass}">${meta.symbol} ${meta.label}</span>
+                </div>
+                ${item.note ? `<p class="text-xs text-slate-700">${escapeHtml(item.note)}</p>` : ''}
+                <p class="text-[11px] text-slate-600">
+                  Teknis ${item.tech}/10 • Waktu ${item.time}/10 • Biaya ${item.cost}/10 | Nilai ${item.value}/10 • Jangkauan ${item.reach}/10 • Strategis ${item.strategic}/10
+                </p>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-3 shrink-0">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                  <div class="px-2.5 py-1.5 rounded-lg bg-slate-100">
+                    <div class="text-[10px] font-semibold uppercase text-slate-600">Feasibility</div>
+                    <div class="text-sm font-bold text-blue-800">${item.feasibility.toFixed(2)}</div>
+                  </div>
+                  <div class="px-2.5 py-1.5 rounded-lg bg-slate-100">
+                    <div class="text-[10px] font-semibold uppercase text-slate-600">Impact</div>
+                    <div class="text-sm font-bold text-emerald-800">${item.impact.toFixed(2)}</div>
+                  </div>
+                  <div class="px-2.5 py-1.5 rounded-lg bg-slate-900 text-white">
+                    <div class="text-[10px] font-semibold uppercase text-slate-300">Prioritas</div>
+                    <div class="text-sm font-bold">${item.priority.toFixed(2)}</div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                  <button type="button" data-action="focus" data-id="${item.id}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-800 hover:bg-slate-100">
+                    Sorot
+                  </button>
+                  <button type="button" data-action="edit" data-id="${item.id}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-800 hover:bg-slate-100">
+                    Edit
+                  </button>
+                  <button type="button" data-action="delete" data-id="${item.id}" class="px-2.5 py-1.5 rounded-lg border border-rose-300 text-xs font-semibold text-rose-800 hover:bg-rose-50">
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            `;
+            els.ideasListContainer.appendChild(card);
+          });
+        }
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      // Edit / Delete Handlers
+      function startEdit(id) {
+        const item = state.ideas.find((i) => i.id === id);
+        if (!item) return;
+
+        els.editingId.value = item.id;
+        els.ideaName.value = item.name;
+        els.ideaCategory.value = item.category;
+        els.ideaNote.value = item.note || '';
+        els.sliderTech.value = item.tech;
+        els.sliderTime.value = item.time;
+        els.sliderCost.value = item.cost;
+        els.sliderValue.value = item.value;
+        els.sliderReach.value = item.reach;
+        els.sliderStrategic.value = item.strategic;
+
+        els.editModeBadge.classList.remove('hidden');
+        els.btnCancelEdit.classList.remove('hidden');
+        els.btnSubmitIdea.textContent = 'Simpan Perubahan';
+        els.ideaNameError.classList.add('hidden');
+        updateFormPreview();
+        els.ideaName.focus();
+        els.ideaForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      function resetForm() {
+        els.editingId.value = '';
+        els.ideaForm.reset();
+        els.sliderTech.value = 7;
+        els.sliderTime.value = 7;
+        els.sliderCost.value = 7;
+        els.sliderValue.value = 7;
+        els.sliderReach.value = 7;
+        els.sliderStrategic.value = 7;
+        els.editModeBadge.classList.add('hidden');
+        els.btnCancelEdit.classList.add('hidden');
+        els.btnSubmitIdea.textContent = '+ Tambah ke Matriks';
+        els.ideaNameError.classList.add('hidden');
+        updateFormPreview();
+      }
+
+      function deleteIdea(id) {
+        const item = state.ideas.find((i) => i.id === id);
+        if (!item) return;
+        openConfirm(`Hapus ide "${item.name}" dari matriks?`, () => {
+          state.ideas = state.ideas.filter((i) => i.id !== id);
+          if (state.selectedId === id) state.selectedId = null;
+          if (els.editingId.value === id) resetForm();
+          saveState();
+          render();
+          showToast('Ide berhasil dihapus.');
+        });
+      }
+
+      // Event Listeners
+      [
+        els.sliderTech,
+        els.sliderTime,
+        els.sliderCost,
+        els.sliderValue,
+        els.sliderReach,
+        els.sliderStrategic
+      ].forEach((slider) => {
+        slider.addEventListener('input', updateFormPreview);
+      });
+
+      els.ideaName.addEventListener('input', () => {
+        if (els.ideaName.value.trim()) {
+          els.ideaNameError.classList.add('hidden');
+        }
+      });
+
+      els.ideaForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = els.ideaName.value.trim();
+        if (!name) {
+          els.ideaNameError.classList.remove('hidden');
+          els.ideaName.focus();
+          return;
+        }
+
+        const payload = {
+          name,
+          category: els.ideaCategory.value,
+          note: els.ideaNote.value.trim(),
+          tech: Number(els.sliderTech.value),
+          time: Number(els.sliderTime.value),
+          cost: Number(els.sliderCost.value),
+          value: Number(els.sliderValue.value),
+          reach: Number(els.sliderReach.value),
+          strategic: Number(els.sliderStrategic.value)
+        };
+
+        const editingId = els.editingId.value;
+        if (editingId) {
+          const idx = state.ideas.findIndex((i) => i.id === editingId);
+          if (idx !== -1) {
+            state.ideas[idx] = { ...state.ideas[idx], ...payload };
+            state.selectedId = editingId;
+            showToast('Perubahan ide disimpan.');
+          }
+        } else {
+          const newId = 'idea-' + Date.now();
+          state.ideas.push({
+            id: newId,
+            ...payload,
+            createdAt: Date.now()
+          });
+          state.selectedId = newId;
+          showToast('Ide baru ditambahkan ke matriks.');
+        }
+
+        resetForm();
+        saveState();
+        render();
+      });
+
+      els.btnCancelEdit.addEventListener('click', resetForm);
+
+      // List delegation
+      els.ideasListContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        if (action === 'focus') {
+          state.selectedId = id;
+          render();
+          els.matrixPlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (action === 'edit') {
+          startEdit(id);
+        } else if (action === 'delete') {
+          deleteIdea(id);
+        }
+      });
+
+      // Inspector actions
+      els.btnInspectorEdit.addEventListener('click', () => {
+        if (state.selectedId) startEdit(state.selectedId);
+      });
+      els.btnInspectorDelete.addEventListener('click', () => {
+        if (state.selectedId) deleteIdea(state.selectedId);
+      });
+
+      // KPI quick filter
+      document.querySelectorAll('.kpi-filter').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const q = btn.dataset.filterQuadrant;
+          state.filterQuadrant = state.filterQuadrant === q ? 'all' : q;
+          els.filterQuadrant.value = state.filterQuadrant;
+          render();
+        });
+      });
+
+      els.searchInput.addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        render();
+      });
+      els.filterQuadrant.addEventListener('change', (e) => {
+        state.filterQuadrant = e.target.value;
+        render();
+      });
+      els.sortBy.addEventListener('change', (e) => {
+        state.sortBy = e.target.value;
+        render();
+      });
+
+      // Sample & Clear actions
+      els.btnResetSamples.addEventListener('click', () => {
+        openConfirm('Muat ulang 5 contoh ide aplikasi bawaan? Daftar saat ini akan diganti.', () => {
+          state.ideas = SAMPLE_IDEAS.map((item) => ({ ...item }));
+          state.selectedId = null;
+          resetForm();
+          saveState();
+          render();
+          showToast('Contoh ide dimuat ulang.');
+        });
+      });
+
+      els.btnClearAll.addEventListener('click', () => {
+        if (state.ideas.length === 0) {
+          showToast('Daftar ide sudah kosong.');
+          return;
+        }
+        openConfirm('Hapus semua ide aplikasi dari matriks?', () => {
+          state.ideas = [];
+          state.selectedId = null;
+          resetForm();
+          saveState();
+          render();
+          showToast('Semua ide telah dikosongkan.');
+        });
+      });
+
+      // Weights Modal
+      function openWeightsModal() {
+        const s = state.settings;
+        els.thresholdSlider.value = s.threshold;
+        els.thresholdVal.textContent = s.threshold.toFixed(1);
+        els.wTech.value = s.wTech;
+        els.wTime.value = s.wTime;
+        els.wCost.value = s.wCost;
+        els.wValue.value = s.wValue;
+        els.wReach.value = s.wReach;
+        els.wStrategic.value = s.wStrategic;
+        els.impactShareSlider.value = s.impactShare;
+        els.impactShareLabel.textContent = `${s.impactShare}% Impact / ${100 - s.impactShare}% Feasibility`;
+        els.weightsModal.classList.remove('hidden');
+        els.thresholdSlider.focus();
+      }
+
+      function closeWeightsModal() {
+        els.weightsModal.classList.add('hidden');
+      }
+
+      els.thresholdSlider.addEventListener('input', () => {
+        els.thresholdVal.textContent = Number(els.thresholdSlider.value).toFixed(1);
+      });
+      els.impactShareSlider.addEventListener('input', () => {
+        const v = Number(els.impactShareSlider.value);
+        els.impactShareLabel.textContent = `${v}% Impact / ${100 - v}% Feasibility`;
+      });
+
+      els.btnOpenWeights.addEventListener('click', openWeightsModal);
+      els.btnCloseWeights.addEventListener('click', closeWeightsModal);
+      els.weightsModal.addEventListener('click', (e) => {
+        if (e.target === els.weightsModal) closeWeightsModal();
+      });
+
+      els.btnResetWeights.addEventListener('click', () => {
+        state.settings = { ...DEFAULT_SETTINGS };
+        openWeightsModal();
+        saveState();
+        updateFormPreview();
+        render();
+        showToast('Bobot & batas dikembalikan ke default.');
+      });
+
+      els.btnSaveWeights.addEventListener('click', () => {
+        state.settings = {
+          threshold: Number(els.thresholdSlider.value),
+          wTech: Math.max(0, Number(els.wTech.value) || 0),
+          wTime: Math.max(0, Number(els.wTime.value) || 0),
+          wCost: Math.max(0, Number(els.wCost.value) || 0),
+          wValue: Math.max(0, Number(els.wValue.value) || 0),
+          wReach: Math.max(0, Number(els.wReach.value) || 0),
+          wStrategic: Math.max(0, Number(els.wStrategic.value) || 0),
+          impactShare: Number(els.impactShareSlider.value)
+        };
+        saveState();
+        updateFormPreview();
+        render();
+        closeWeightsModal();
+        showToast('Pengaturan bobot diterapkan.');
+      });
+
+      // Confirm Modal Listeners
+      els.btnConfirmCancel.addEventListener('click', closeConfirm);
+      els.btnConfirmOk.addEventListener('click', () => {
+        const fn = pendingConfirmAction;
+        closeConfirm();
+        if (typeof fn === 'function') fn();
+      });
+      els.confirmModal.addEventListener('click', (e) => {
+        if (e.target === els.confirmModal) closeConfirm();
+      });
+
+      // Escape key closes modals
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (!els.weightsModal.classList.contains('hidden')) closeWeightsModal();
+          if (!els.confirmModal.classList.contains('hidden')) closeConfirm();
+        }
+      });
+
+      // Export CSV
+      els.btnExportCsv.addEventListener('click', () => {
+        if (state.ideas.length === 0) {
+          showToast('Tidak ada data untuk diekspor.');
+          return;
+        }
+        const enriched = state.ideas
+          .map((i) => ({ ...i, ...computeScores(i) }))
+          .sort((a, b) => b.priority - a.priority);
+
+        const headers = [
+          'Peringkat',
+          'Nama Ide',
+          'Kategori',
+          'Kuadran',
+          'Feasibility',
+          'Impact',
+          'Skor Prioritas',
+          'Teknis',
+          'Waktu',
+          'Biaya',
+          'Nilai User',
+          'Jangkauan',
+          'Strategis',
+          'Catatan'
+        ];
+        const rows = enriched.map((i, idx) => [
+          idx + 1,
+          `"${String(i.name).replace(/"/g, '""')}"`,
+          `"${String(i.category).replace(/"/g, '""')}"`,
+          `"${getQuadrantMeta(i.quadrant).label}"`,
+          i.feasibility.toFixed(2),
+          i.impact.toFixed(2),
+          i.priority.toFixed(2),
+          i.tech,
+          i.time,
+          i.cost,
+          i.value,
+          i.reach,
+          i.strategic,
+          `"${String(i.note || '').replace(/"/g, '""')}"`
+        ]);
+
+        const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'matriks-ide-aplikasi.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('File CSV berhasil diunduh.');
+      });
+
+      // Copy Summary
+      els.btnCopySummary.addEventListener('click', async () => {
+        if (state.ideas.length === 0) {
+          showToast('Belum ada ide untuk disalin.');
+          return;
+        }
+        const enriched = state.ideas
+          .map((i) => ({ ...i, ...computeScores(i) }))
+          .sort((a, b) => b.priority - a.priority);
+
+        const lines = [
+          `Ringkasan Matriks Feasibility & Impact (Batas Kuadran: ${state.settings.threshold.toFixed(1)})`,
+          ...enriched.map(
+            (i, idx) =>
+              `${idx + 1}. ${i.name} [${getQuadrantMeta(i.quadrant).label}] — Prioritas: ${i.priority.toFixed(2)} (Feasibility: ${i.feasibility.toFixed(2)}, Impact: ${i.impact.toFixed(2)})`
+          )
+        ];
+        const text = lines.join('\n');
+
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+            showToast('Ringkasan disalin ke clipboard.');
+            return;
+          }
+        } catch (err) {
+          // Fallback below
+        }
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('Ringkasan disalin ke clipboard.');
+        } catch (err) {
+          showToast('Gagal menyalin ringkasan.');
+        }
+        document.body.removeChild(ta);
+      });
+
+      // Init
+      loadState();
+      updateFormPreview();
+      render();
+    })();
+  </script>
+</body>
+</html>
